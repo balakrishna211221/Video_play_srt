@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Video Player with Live Subtitles</title>
+  <style>
+    #video-container {
+      position: relative;
+      width: 640px;
+      margin: 20px auto;
+    }
+    #myVideo {
+      width: 100%;
+      height: auto;
+    }
+    #cc-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 2;
+      padding: 8px 16px;
+      background: #222;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      opacity: 0.8;
+    }
+    #subtitles {
+      position: absolute;
+      bottom: 40px;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      color: #fff;
+      background: rgba(0,0,0,0.5);
+      font-size: 1.5em;
+      padding: 8px 0;
+      z-index: 1;
+      pointer-events: none;
+      border-radius: 4px;
+      min-height: 2em;
+    }
+    #url-form {
+      text-align: center;
+      margin-top: 30px;
+    }
+    #url-input {
+      width: 400px;
+      padding: 8px;
+      font-size: 1em;
+    }
+  </style>
+</head>
+<body>
+  <div id="url-form">
+    <input id="url-input" type="text" placeholder="Enter video URL (mp4, webm, etc.)" />
+    <button onclick="loadVideo()">Play Video</button>
+  </div>
+  <div id="video-container" style="display:none;">
+    <video id="myVideo" controls crossorigin="anonymous"></video>
+    <button id="cc-btn" onclick="toggleCC()">CC</button>
+    <div id="subtitles"></div>
+  </div>
+  <script>
+    let recognition;
+    let ccEnabled = false;
+
+    function loadVideo() {
+      const url = document.getElementById('url-input').value;
+      if (!url) return;
+      const video = document.getElementById('myVideo');
+      video.src = url;
+      document.getElementById('video-container').style.display = 'block';
+      document.getElementById('subtitles').textContent = '';
+      stopRecognition();
+      ccEnabled = false;
+      document.getElementById('cc-btn').textContent = 'CC';
+    }
+
+    function toggleCC() {
+      ccEnabled = !ccEnabled;
+      document.getElementById('cc-btn').textContent = ccEnabled ? 'CC On' : 'CC';
+      if (ccEnabled) {
+        startRecognition();
+      } else {
+        stopRecognition();
+        document.getElementById('subtitles').textContent = '';
+      }
+    }
+
+    function startRecognition() {
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        alert('Speech Recognition not supported in this browser.');
+        return;
+      }
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onresult = function(event) {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          transcript += event.results[i][0].transcript;
+        }
+        document.getElementById('subtitles').textContent = transcript;
+      };
+
+      recognition.onerror = function(event) {
+        document.getElementById('subtitles').textContent = '[Speech recognition error]';
+      };
+
+      recognition.onend = function() {
+        if (ccEnabled) startRecognition();
+      };
+
+      recognition.start();
+    }
+
+    function stopRecognition() {
+      if (recognition) {
+        recognition.onend = null;
+        recognition.stop();
+        recognition = null;
+      }
+    }
+  </script>
+</body>
+</html>
